@@ -1,4 +1,4 @@
-package cn.yuanfengshan.base.update.utils;
+package cn.yuanfengshan.base.update.demo.utils;
 
 
 import androidx.annotation.NonNull;
