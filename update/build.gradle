@@ -1,7 +1,9 @@
 plugins {
     id 'com.android.library'
+    id 'maven-publish'
+    id 'signing'
 }
-
+def VERSION = "1.0.0"
 android {
     namespace 'cn.yuanfengshan.base.update'
     compileSdk 32
@@ -9,7 +11,8 @@ android {
     defaultConfig {
         minSdk 21
         targetSdk 32
-
+        versionName VERSION
+        flavorDimensions "versionCode"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
     }
@@ -24,13 +27,151 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+
+    //  修改打包命名规则
+    android.libraryVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = project.name + "_${defaultConfig.versionName}" + '.aar'
+        }
+    }
 }
 
 dependencies {
-
     implementation 'androidx.appcompat:appcompat:1.6.0'
-    implementation 'com.google.android.material:material:1.7.0'
-    testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+//    implementation 'com.google.android.material:material:1.7.0'
+//    testImplementation 'junit:junit:4.13.2'
+//    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+//    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+
+}
+
+
+
+
+println("检查仓库账号信息")
+println("ossrhUsername：${ossrhUsername}")
+println("ossrhPassword：${ossrhPassword}")
+
+
+def ossHead = "https://s01.oss.sonatype.org"
+def customArtifactId="AppUpdate"
+def githubUrl="https://github.com/YuanFengShan/AppUpdate"
+def githubGitUrl="${githubUrl}.git"
+afterEvaluate {
+    publishing {
+        repositories {
+            maven {
+                name "local"
+                url = "$buildDir/repo"
+            }
+            maven {
+                allowInsecureProtocol(true)
+                name "sonartype-Staging"
+                url = "${ossHead}/service/local/staging/deploy/maven2"
+                println("${name}仓库上传的地址:${url}")
+                credentials {
+                    username = ossrhUsername
+                    password = ossrhPassword
+                }
+            }
+            // 定义snapshot仓库
+            maven {
+                allowInsecureProtocol(true)
+                name "sonatype-Snapshots"
+                // change to point to your repo, e.g. http://my.org/repo
+                url = "${ossHead}/content/repositories/snapshots/"
+                println("${name}仓库上传的地址:${url}")
+                credentials {
+                    username = ossrhUsername
+                    password = ossrhPassword
+                }
+            }
+        }
+        publications {
+            // Creates a Maven publication called "release".
+            release(MavenPublication) {
+                // Applies the component for the release build variant.
+                from components.release
+
+//                from components.release
+
+                // You can then customize attributes of the publication as shown below.
+                groupId = 'io.github.yuanfengshan'
+                artifactId = customArtifactId
+                version = VERSION
+                pom {
+                    name = customArtifactId+' Android Plugin Framework'
+                    description = 'A Android Plugin Framework'
+                    url = githubUrl
+                    licenses {
+                        license {
+                            name = 'The Apache Software License, Version 2.0'
+                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = 'yuanfengshan'
+                            name = 'yuanfengshan'
+                            email = '645633369@qq.com'
+                        }
+                    }
+                    scm {
+                        connection = githubGitUrl
+                        developerConnection =githubGitUrl
+                        url = githubUrl
+                    }
+                }
+            }
+            // Creates a Maven publication called “debug”.
+            debug(MavenPublication) {
+                // Applies the component for the debug build variant.
+                from components.debug
+
+
+                groupId = 'io.github.yuanfengshan'
+                artifactId = customArtifactId
+                version = String.format("%s-SNAPSHOT", VERSION)
+
+                pom {
+                    name = customArtifactId+' Android Plugin Framework'
+                    description = 'A Android Plugin Framework'
+                    url = githubUrl
+                    licenses {
+                        license {
+                            name = 'The Apache Software License, Version 2.0'
+                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = 'yuanfengshan'
+                            name = 'yuanfengshan'
+                            email = '645633369@qq.com'
+                        }
+                    }
+                    scm {
+                        connection = githubGitUrl
+                        developerConnection =githubGitUrl
+                        url = githubUrl
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    archiveClassifier.set("sources")
+}
+signing {
+    sign publishing.publications
+}
+
+//打包main目录下代码和资源的 task
+task androidSourcesJar(type: Jar) {
+    classifier = 'sources'
+    from android.sourceSets.main.java.srcDirs
 }
